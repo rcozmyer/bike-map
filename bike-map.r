@@ -43,8 +43,6 @@ for (f in fileslistfit){
   }
 }
 
-plot(yearlyTTTfit)
-
 #### Read gpx files####
 # TODO write a function to read gpx files
 first = 0
@@ -61,16 +59,38 @@ for (f in fileslistgpx){
     yearlyTTTgpx <- st_union(TTTLine$"geometry", yearlyTTTgpx)
   }
 }
-plot(yearlyTTTgpx)
 
 #### Combine the gpx and fit rides ####
 # TODO combine the gpx and fit ride lines
 yearlyTTT <- st_union(yearlyTTTgpx, yearlyTTTfit)
-#yearlyTTT <- yearlyTTTfit
 
 #### Map the Data ####
-ggplot() +
-  geom_sf(data = yearlyTTT) +
-  scale_colour_gradient(low = "white", high = "black") +
-  theme_void()
+xmin <- round(st_bbox(yearlyTTT)$"xmin",1)
+xmax <- round(st_bbox(yearlyTTT)$"xmax",1)
+xmid <- (xmin + xmax)/2
+xmin <- min(xmin, xmid-0.2) #make sure that the axis spans at least 0.4 degrees
+xmax <- max(xmax, xmid+0.2) #make sure that the axis spans at least 0.4 degrees
+ymin <- round(st_bbox(yearlyTTT)$"ymin",1)
+ymax <- round(st_bbox(yearlyTTT)$"ymax",1)
+ymid <- (ymin + ymax)/2
+ymin <- min(ymin, ymid-0.2) #make sure that the axis spans at least 0.4 degrees
+ymax <- max(ymax, ymid+0.2) #make sure that the axis spans at least 0.4 degrees
+TTT_bb <- c( left = xmin-0.2, bottom = ymin-0.2, right = xmax+0.2, top = ymax+0.2)
 
+# This sf_use_s2 parameter gives some sort of error "only first part of 
+# geometrycollection is retained" which I don't like even though it doesn't  
+# appear to affect the appear to affect the results.
+sf_use_s2(FALSE) 
+
+# Map the data with background for context
+ggmap(get_stamenmap(bbox = TTT_bb, maptype='terrain-background'), maprange = FALSE)+
+  geom_sf(data = yearlyTTT, inherit.aes = FALSE) +
+  coord_sf(xlim = c(xmin, xmax), ylim = c(ymin, ymax)) + 
+  scale_x_continuous(breaks = seq(xmin, xmax, by = .1)) + 
+  scale_y_continuous(breaks = seq(ymin, ymax, by = .1))
+
+# Map just the line data
+yearlyTTT %>% 
+  ggplot(aes()) +
+  geom_sf() +
+  coord_sf(xlim = c(xmin, xmax), ylim = c(ymin, ymax))
